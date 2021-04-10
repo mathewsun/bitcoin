@@ -4,8 +4,7 @@
 
 #include <util/system.h>
 
-#include <support/allocators/secure.h>
-#include <test/setup_common.h>
+#include <test/util/setup_common.h>
 
 #include <memory>
 
@@ -163,7 +162,7 @@ private:
 BOOST_AUTO_TEST_CASE(lockedpool_tests_mock)
 {
     // Test over three virtual arenas, of which one will succeed being locked
-    std::unique_ptr<LockedPageAllocator> x = MakeUnique<TestLockedPageAllocator>(3, 1);
+    std::unique_ptr<LockedPageAllocator> x = std::make_unique<TestLockedPageAllocator>(3, 1);
     LockedPool pool(std::move(x));
     BOOST_CHECK(pool.stats().total == 0);
     BOOST_CHECK(pool.stats().locked == 0);

@@ -1,14 +1,16 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2009-2020 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <outputtype.h>
 
-#include <keystore.h>
 #include <pubkey.h>
 #include <script/script.h>
+#include <script/sign.h>
+#include <script/signingprovider.h>
 #include <script/standard.h>
+#include <util/vector.h>
 
 #include <assert.h>
 #include <string>
@@ -38,8 +40,8 @@ const std::string& FormatOutputType(OutputType type)
     case OutputType::LEGACY: return OUTPUT_TYPE_STRING_LEGACY;
     case OutputType::P2SH_SEGWIT: return OUTPUT_TYPE_STRING_P2SH_SEGWIT;
     case OutputType::BECH32: return OUTPUT_TYPE_STRING_BECH32;
-    default: assert(false);
-    }
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 
 CTxDestination GetDestinationForKey(const CPubKey& key, OutputType type)
@@ -49,7 +51,7 @@ CTxDestination GetDestinationForKey(const CPubKey& key, OutputType type)
     case OutputType::P2SH_SEGWIT:
     case OutputType::BECH32: {
         if (!key.IsCompressed()) return PKHash(key);
-        CTxDestination witdest = WitnessV0KeyHash(PKHash(key));
+        CTxDestination witdest = WitnessV0KeyHash(key);
         CScript witprog = GetScriptForDestination(witdest);
         if (type == OutputType::P2SH_SEGWIT) {
             return ScriptHash(witprog);
@@ -57,23 +59,24 @@ CTxDestination GetDestinationForKey(const CPubKey& key, OutputType type)
             return witdest;
         }
     }
-    default: assert(false);
-    }
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
 
 std::vector<CTxDestination> GetAllDestinationsForKey(const CPubKey& key)
 {
     PKHash keyid(key);
+    CTxDestination p2pkh{keyid};
     if (key.IsCompressed()) {
         CTxDestination segwit = WitnessV0KeyHash(keyid);
         CTxDestination p2sh = ScriptHash(GetScriptForDestination(segwit));
-        return std::vector<CTxDestination>{std::move(keyid), std::move(p2sh), std::move(segwit)};
+        return Vector(std::move(p2pkh), std::move(p2sh), std::move(segwit));
     } else {
-        return std::vector<CTxDestination>{std::move(keyid)};
+        return Vector(std::move(p2pkh));
     }
 }
 
-CTxDestination AddAndGetDestinationForScript(CKeyStore& keystore, const CScript& script, OutputType type)
+CTxDestination AddAndGetDestinationForScript(FillableSigningProvider& keystore, const CScript& script, OutputType type)
 {
     // Add script to keystore
     keystore.AddCScript(script);
@@ -95,7 +98,6 @@ CTxDestination AddAndGetDestinationForScript(CKeyStore& keystore, const CScript&
             return ScriptHash(witprog);
         }
     }
-    default: assert(false);
-    }
+    } // no default case, so the compiler can warn about missing cases
+    assert(false);
 }
-
